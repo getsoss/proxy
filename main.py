@@ -38,7 +38,7 @@ SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
 
 SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 
-ionION_TIMEOUT_SECONDS = 3600  # 1시간
+SESSION_TIMEOUT_SECONDS = 3600  # 1시간
 
 # --- 세션 저장소 (메모리 기반) ---
 
@@ -506,7 +506,7 @@ async def terminate_session(session_id: str, current_user: Dict = Depends(get_cu
 
     """Delete a user VM via infra-launcher and remove session state."""
 
-     SS SESSIONS.get(session_id)
+    session = SESSIONS.get(session_id)
 
     if session and session.get("uid") and session["uid"] != current_user.get("id"):
 
@@ -771,10 +771,7 @@ async def session_proxy(websocket: WebSocket, session_id: str):
 
         return
 
-    
-    
-    
-    IONS.get(session_id)
+    session = SESSIONS.get(session_id)
 
     if not session:
 
