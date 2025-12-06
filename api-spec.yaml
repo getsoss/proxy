@@ -1,0 +1,353 @@
+openapi: 3.0.3
+info:
+  title: Proxy Server API
+  description: |
+    Kubernetes 리소스 조회를 위한 프록시 서버 API 명세서
+    
+    이 API는 특정 세션의 Kubernetes Pods와 Nodes를 조회하는 기능을 제공합니다.
+  version: 1.0.0
+  contact:
+    name: API Support
+
+servers:
+  - url: http://localhost:8000
+    description: 로컬 개발 서버
+  - url: https://api.example.com
+    description: 프로덕션 서버
+
+tags:
+  - name: Kubernetes Resources
+    description: Kubernetes 리소스 조회 API
+
+paths:
+  /session/{session_id}/pods:
+    get:
+      tags:
+        - Kubernetes Resources
+      summary: 세션의 Pods 조회
+      description: |
+        특정 세션에 연결된 Kubernetes 클러스터의 모든 Pods를 조회합니다.
+        
+        이 API는 해당 세션의 VM에 있는 k8s-api-server를 통해 Pods 정보를 가져옵니다.
+      operationId: getSessionPods
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          description: 세션 ID
+          schema:
+            type: string
+            example: "session-12345"
+        - name: Authorization
+          in: header
+          required: true
+          description: |
+            Bearer 토큰을 포함한 인증 헤더
+            형식: `Bearer {access_token}`
+          schema:
+            type: string
+            example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      responses:
+        '200':
+          description: 성공적으로 Pods 목록을 조회함
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PodList'
+              examples:
+                success:
+                  summary: Pods 조회 성공 예시
+                  value:
+                    kind: "PodList"
+                    apiVersion: "v1"
+                    metadata:
+                      resourceVersion: "12345"
+                    items:
+                      - metadata:
+                          name: "nginx-pod"
+                          namespace: "default"
+                          uid: "123e4567-e89b-12d3-a456-426614174000"
+                        spec:
+                          containers:
+                            - name: "nginx"
+                              image: "nginx:latest"
+                        status:
+                          phase: "Running"
+                          podIP: "10.244.1.5"
+        '401':
+          description: 인증 실패 (토큰이 없거나 유효하지 않음)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "Invalid token"
+        '403':
+          description: 권한 없음 (해당 세션에 대한 접근 권한이 없음)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "Not authorised for this session"
+        '404':
+          description: 세션을 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "Session not found"
+        '500':
+          description: 내부 서버 오류
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "Internal server error"
+        '502':
+          description: k8s-api-server에 연결할 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "Failed to reach k8s-api-server"
+
+  /session/{session_id}/nodes:
+    get:
+      tags:
+        - Kubernetes Resources
+      summary: 세션의 Nodes 조회
+      description: |
+        특정 세션에 연결된 Kubernetes 클러스터의 모든 Nodes를 조회합니다.
+        
+        이 API는 해당 세션의 VM에 있는 k8s-api-server를 통해 Nodes 정보를 가져옵니다.
+      operationId: getSessionNodes
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          description: 세션 ID
+          schema:
+            type: string
+            example: "session-12345"
+        - name: Authorization
+          in: header
+          required: true
+          description: |
+            Bearer 토큰을 포함한 인증 헤더
+            형식: `Bearer {access_token}`
+          schema:
+            type: string
+            example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      responses:
+        '200':
+          description: 성공적으로 Nodes 목록을 조회함
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NodeList'
+              examples:
+                success:
+                  summary: Nodes 조회 성공 예시
+                  value:
+                    kind: "NodeList"
+                    apiVersion: "v1"
+                    metadata:
+                      resourceVersion: "12345"
+                    items:
+                      - metadata:
+                          name: "node-1"
+                          uid: "123e4567-e89b-12d3-a456-426614174000"
+                        spec: {}
+                        status:
+                          conditions:
+                            - type: "Ready"
+                              status: "True"
+                          addresses:
+                            - type: "InternalIP"
+                              address: "10.0.0.1"
+        '401':
+          description: 인증 실패 (토큰이 없거나 유효하지 않음)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "Invalid token"
+        '403':
+          description: 권한 없음 (해당 세션에 대한 접근 권한이 없음)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "Not authorised for this session"
+        '404':
+          description: 세션을 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "Session not found"
+        '500':
+          description: 내부 서버 오류
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "Internal server error"
+        '502':
+          description: k8s-api-server에 연결할 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "Failed to reach k8s-api-server"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Supabase에서 발급한 Bearer 토큰
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        detail:
+          type: string
+          description: 에러 메시지
+      required:
+        - detail
+
+    PodList:
+      type: object
+      description: Kubernetes PodList 리소스
+      properties:
+        kind:
+          type: string
+          example: "PodList"
+        apiVersion:
+          type: string
+          example: "v1"
+        metadata:
+          type: object
+          properties:
+            resourceVersion:
+              type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Pod'
+      required:
+        - kind
+        - apiVersion
+        - items
+
+    Pod:
+      type: object
+      description: Kubernetes Pod 리소스
+      properties:
+        metadata:
+          type: object
+          properties:
+            name:
+              type: string
+            namespace:
+              type: string
+            uid:
+              type: string
+        spec:
+          type: object
+          properties:
+            containers:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  image:
+                    type: string
+        status:
+          type: object
+          properties:
+            phase:
+              type: string
+            podIP:
+              type: string
+      required:
+        - metadata
+
+    NodeList:
+      type: object
+      description: Kubernetes NodeList 리소스
+      properties:
+        kind:
+          type: string
+          example: "NodeList"
+        apiVersion:
+          type: string
+          example: "v1"
+        metadata:
+          type: object
+          properties:
+            resourceVersion:
+              type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Node'
+      required:
+        - kind
+        - apiVersion
+        - items
+
+    Node:
+      type: object
+      description: Kubernetes Node 리소스
+      properties:
+        metadata:
+          type: object
+          properties:
+            name:
+              type: string
+            uid:
+              type: string
+        spec:
+          type: object
+        status:
+          type: object
+          properties:
+            conditions:
+              type: array
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+                  status:
+                    type: string
+            addresses:
+              type: array
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+                  address:
+                    type: string
+      required:
+        - metadata
+
+security:
+  - BearerAuth: []
+
